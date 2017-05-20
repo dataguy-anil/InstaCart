@@ -1,0 +1,359 @@
+---
+title: "R Notebook for InstaCart Product Analysis"
+output:
+  html_document: default
+  html_notebook: default
+---
+GitHub Repo:
+
+
+Assignment: 
+Choose a problem domain and a question you are interested to answer. It could be in the public policy, sports, business, politics, art etc - any topic that you are interested to explore.Then apply the problem-solving framework to answer that question.
+	• Frame the Problem: Identify the key question are you trying to answer.
+	• Acquire the Data: Get the dataset to answer the question.
+	• Refine the Data: Do the basic refinement to clean up the dataset.
+	• Transform the Data: Do the transformation needed for the dataset.
+	• Explore the Data: Create the 3 - 4 individual visualisation that explore the dataset.
+	• Model the Data: Do the basic modelling (as needed) to answer the question
+	• Communicate the insight: Create final visualisations to share the insight.
+Please ensure you create .rmd notebook to communicate your thought process as well as the code. Create a github account and repo for your code and data.
+Potential Data Sources
+	• Data is Plural
+	• Data.gov.in
+	• Kaggle Datasets
+	• Awesome Public Dataset
+Please submit the following -
+1. A working R code in .Rmd file format.
+2. The Question you framed and Output/Insights of what you have done.
+
+### Frame the Problem: Identify the key question are you trying to answer
+
+InstaCart wants to find more insights about their store sales, best sellers and want to learn about the product portfolio. There are 6 csv data files downloaded from Kaggle competitions.
+
+Questions to be answered:
+1. What is the most prominent day/time for the sales?
+2. How many items do people buy ?
+3. What is the best seller of the entire product portfolio?
+4. How often do people order the same items again ?
+5. What are the most often reordered products?
+6. Which item do people put into the cart first?
+7. Is there an association between time of last order and probability of reorder ?
+8. Is there an association between number of orders and probability of reordering ?
+9. Visualize the product portfolio
+10. How many unique products are offered in each department/aisle?
+11. How often are products from the department/aisle sold?
+
+
+
+### Acquire the Data: Get the dataset to answer the question.
+```{r message=FALSE, warning=FALSE}
+# install.packages("readr")
+# install.packages("dplyr")
+# install.packages("ggplot2")
+# install.packages("knitr")
+# install.packages("stringr")
+# install.packages("DT")
+# install.packages("data.table")
+
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(stringr)
+library(DT)
+library(data.table)
+
+orders <- fread('Data/orders.csv', sep = ',')
+products <- fread('Data/products.csv')
+order_products <- fread('Data/order_products__train.csv')
+order_products_prior <- fread('Data/order_products__prior.csv')
+aisles <- fread('Data/aisles.csv')
+departments <- fread('Data/departments.csv')
+
+```
+
+
+```{r include=FALSE}
+options(tibble.width = Inf)
+
+```
+
+
+Lets first have a look at these files:
+
+### Refine the Data: Do the basic refinement to clean up the dataset.
+#### orders
+
+This file gives a list of all orders we have in the dataset. 1 row per order. 
+For example, we can see that user 1 has 11 orders, 1 of which is in the train set, and 10 of which are prior orders. The orders.csv doesn't tell us about which products were ordered. This is contained in the order_products.csv
+
+```{r, result='asis'}
+kable(head(orders,12))
+str(orders, max.level=1)
+```
+
+
+#### order_products_train
+
+This file gives us information about which products (product_id) were ordered. It also contains information of the order (add_to_cart_order) in which the products were put into the cart and information of whether this product is a re-order(1) or not(0).
+
+For example, we see below that order_id 1 had 8 products, 4 of which are reorders.
+
+Still we don't know what these products are. This information is in the products.csv
+
+```{r}
+kable(head(order_products,10))
+str(order_products, max.level=1)
+```
+
+#### products
+
+This file contains the names of the products with their corresponding product_id. Furthermore the aisle and deparment are included.
+
+```{r}
+kable(head(products,10))
+str(products, max.level=1)
+```
+
+#### order_products_prior
+
+This file is structurally the same as the other_products_train.csv. 
+
+```{r, result='asis'}
+kable(head(order_products_prior,10))
+str(order_products_prior, max.level=1)
+```
+
+
+#### aisles
+
+This file contains the different aisles.
+
+```{r, result='asis'}
+kable(head(aisles,10))
+str(aisles, max.level=1)
+```
+
+#### departments
+
+```{r, result='asis'}
+kable(head(departments,10))
+str(departments, max.level=1)
+```
+
+### Transform the Data: Do the transformation needed for the dataset. Record Variables
+We should do some recoding and convert character variables to factors. 
+```{r message=FALSE, warning=FALSE}
+head(orders)
+orders <- orders %>% mutate(order_hour_of_day = as.numeric(order_hour_of_day), eval_set = as.factor(eval_set))
+products <- products %>% mutate(product_name = as.factor(product_name))
+aisles <- aisles %>% mutate(aisle = as.factor(aisle))
+departments <- departments %>% mutate(department = as.factor(department))
+```
+
+### Explore the Data, Model the data, and Communicate the insights
+When do people order? Let's have a look when people buy groceries online. 
+
+
+#### Hour of Day
+There is a clear effect of hour of day on order volume. Most orders are between 8.00-18.00
+```{r warning=FALSE}
+orders %>% 
+  ggplot(aes(x=order_hour_of_day)) + 
+  geom_histogram(stat="count",fill="red")
+```
+
+#### Day of Week
+There is a clear effect of day of the week. Most orders are on days 0 and 1. Unfortunately there is no info regarding which values represent which day, but one would assume that this is the weekend.
+
+```{r warning=FALSE}
+
+orders %>% 
+  ggplot(aes(x=order_dow)) + 
+  geom_histogram(stat="count",fill="red")
+```
+
+
+### When do they order again?
+People seem to order more often after exactly 1 week. 
+```{r warning=FALSE}
+orders %>% 
+  ggplot(aes(x=days_since_prior_order)) + 
+  geom_histogram(stat="count",fill="red")
+```
+
+### How many items do people buy? {.tabset}
+Let's have a look how many items are in the orders. We can see that people most often order around 5 items. The distributions are comparable between the train and prior order set.
+
+#### Train set
+```{r warning=FALSE}
+order_products %>% 
+  group_by(order_id) %>% 
+  summarize(n_items = last(add_to_cart_order)) %>%
+  ggplot(aes(x=n_items))+
+  geom_histogram(stat="count",fill="red") + 
+  geom_rug()+
+  coord_cartesian(xlim=c(0,80))
+```
+
+#### Prior orders set
+```{r warning=FALSE}
+order_products_prior %>% 
+  group_by(order_id) %>% 
+  summarize(n_items = last(add_to_cart_order)) %>%
+  ggplot(aes(x=n_items))+
+  geom_histogram(stat="count",fill="red") + 
+  geom_rug() + 
+  coord_cartesian(xlim=c(0,80))
+```
+
+
+### Bestsellers
+Let's have a look which products are sold most often (top10). And the clear winner is:
+**Bananas**
+
+```{r fig.height=5.5}
+tmp <- order_products %>% 
+  group_by(product_id) %>% 
+  summarize(count = n()) %>% 
+  top_n(10, wt = count) %>%
+  left_join(select(products,product_id,product_name),by="product_id") %>%
+  arrange(desc(count)) 
+kable(tmp)
+
+tmp %>% 
+  ggplot(aes(x=reorder(product_name,-count), y=count))+
+  geom_bar(stat="identity",fill="red")+
+  theme(axis.text.x=element_text(angle=90, hjust=1),axis.title.x = element_blank())
+
+```
+
+### How often do people order the same items again?
+59% of the ordered items are reorders.
+```{r warning=FALSE, fig.width=4}
+tmp <- order_products %>% 
+  group_by(reordered) %>% 
+  summarize(count = n()) %>% 
+  mutate(reordered = as.factor(reordered)) %>%
+  mutate(proportion = count/sum(count))
+kable(tmp)
+  
+tmp %>% 
+  ggplot(aes(x=reordered,y=count,fill=reordered))+
+  geom_bar(stat="identity")
+
+```
+
+
+### Most often reordered
+Now here it becomes really interesting. These 10 products have the highest probability of being reordered.
+
+```{r warning=FALSE, fig.height=5.5}
+tmp <-order_products %>% 
+  group_by(product_id) %>% 
+  summarize(proportion_reordered = mean(reordered), n=n()) %>% 
+  filter(n>40) %>% 
+  top_n(10,wt=proportion_reordered) %>% 
+  arrange(desc(proportion_reordered)) %>% 
+  left_join(products,by="product_id")
+
+kable(tmp)
+
+tmp %>% 
+  ggplot(aes(x=reorder(product_name,-proportion_reordered), y=proportion_reordered))+
+  geom_bar(stat="identity",fill="red")+
+  theme(axis.text.x=element_text(angle=90, hjust=1),axis.title.x = element_blank())+coord_cartesian(ylim=c(0.85,0.95))
+```
+
+
+### Which item do people put into the cart first?
+People seem to be quite certain about Multifold Towels and if they buy them, put
+them into their cart first in 66% of the time.
+```{r message=FALSE, fig.height=5.5}
+tmp <- order_products %>% 
+  group_by(product_id, add_to_cart_order) %>% 
+  summarize(count = n()) %>% mutate(pct=count/sum(count)) %>% 
+  filter(add_to_cart_order == 1, count>10) %>% 
+  arrange(desc(pct)) %>% 
+  left_join(products,by="product_id") %>% 
+  select(product_name, pct, count) %>% 
+  ungroup() %>% 
+  top_n(10, wt=pct)
+
+kable(tmp)
+
+tmp %>% 
+  ggplot(aes(x=reorder(product_name,-pct), y=pct))+
+  geom_bar(stat="identity",fill="red")+
+  theme(axis.text.x=element_text(angle=90, hjust=1),axis.title.x = element_blank())+coord_cartesian(ylim=c(0.4,0.7))
+
+```
+
+### Association between time of last order and probability of reorder
+This is interesting: We can see that if people order again on the same day, they order the same product more often. Whereas when 30 days have passed, they tend to try out new things in their order.
+
+```{r}
+order_products %>% 
+  left_join(orders,by="order_id") %>% 
+  group_by(days_since_prior_order) %>%
+  summarize(mean_reorder = mean(reordered)) %>%
+  ggplot(aes(x=days_since_prior_order,y=mean_reorder))+
+  geom_bar(stat="identity",fill="red")
+```
+
+
+### Association between number of orders and probability of reordering
+Products with a high number of orders are naturally more likely to be reordered. However, there seems to be a ceiling effect. 
+
+```{r message=FALSE}
+order_products %>% 
+  group_by(product_id) %>% 
+  summarize(proportion_reordered = mean(reordered), n=n()) %>%
+  ggplot(aes(x=n,y=proportion_reordered))+
+  geom_point()+
+  geom_smooth(color="red")+
+  coord_cartesian(xlim=c(0,2000))
+
+```
+
+
+### Visualizing the Product Portfolio
+Here is use to treemap package to visualize the structure of instacarts product portfolio. In total there are 21 departments containing 134 aisles. 
+
+```{r}
+# install.packages("treemap")
+library(treemap)
+
+tmp <- products %>% group_by(department_id, aisle_id) %>% summarize(n=n())
+tmp <- tmp %>% left_join(departments,by="department_id")
+tmp <- tmp %>% left_join(aisles,by="aisle_id")
+
+tmp2<-order_products %>% 
+  group_by(product_id) %>% 
+  summarize(count=n()) %>% 
+  left_join(products,by="product_id") %>% 
+  ungroup() %>% 
+  group_by(department_id,aisle_id) %>% 
+  summarize(sumcount = sum(count)) %>% 
+  left_join(tmp, by = c("department_id", "aisle_id")) %>% 
+  mutate(onesize = 1)
+
+```
+
+#### How are aisles organized within departments?
+```{r, fig.width=9, fig.height=6}
+treemap(tmp2,index=c("department","aisle"),vSize="onesize",vColor="department",palette="Set3",title="",sortID="-sumcount", border.col="#FFFFFF",type="categorical", fontsize.legend = 0,bg.labels = "#FFFFFF")
+```
+
+#### How many unique products are offered in each department/aisle?
+The size of the boxes shows the number of products in each category. 
+```{r, fig.width=9, fig.height=6}
+treemap(tmp,index=c("department","aisle"),vSize="n",title="",palette="Set3",border.col="#FFFFFF")
+```
+
+#### How often are products from the department/aisle sold?
+The size of the boxes shows the number of sales. 
+```{r, fig.width=9, fig.height=6}
+treemap(tmp2,index=c("department","aisle"),vSize="sumcount",title="",palette="Set3",border.col="#FFFFFF")
+```
