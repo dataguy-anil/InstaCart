@@ -1,0 +1,20 @@
+What has been done:
+
+Data is available on GitHub URL: https://github.com/dataguy-anil/InstaCart
+
+Kaggle data sets were downloaded to RStudio and worked out the following. There are many questions can be framed but limited to simple ones so far. Each of the following questions were answered at every code chunk in the Rmd file.
+
+
+Questions to be answered:
+1. What is the most prominent day/time for the sales?
+2. How many items do people buy ?
+3. What is the best seller of the entire product portfolio?
+4. How often do people order the same items again ?
+5. What are the most often reordered products?
+6. Which item do people put into the cart first?
+7. Is there an association between time of last order and probability of reorder ?
+8. Is there an association between number of orders and probability of reordering ?
+9. Visualize the product portfolio
+10. How many unique products are offered in each department/aisle?
+11. How often are products from the department/aisle sold?
+
