@@ -1,6 +1,6 @@
 What has been done:
 
-Data is available on GitHub URL: https://github.com/dataguy-anil/InstaCart
+Data is available on GitHub URL: https://www.kaggle.com/c/instacart-market-basket-analysis/data
 
 Kaggle data sets were downloaded to RStudio and worked out the following. There are many questions can be framed but limited to simple ones so far. Each of the following questions were answered at every code chunk in the Rmd file.
 
